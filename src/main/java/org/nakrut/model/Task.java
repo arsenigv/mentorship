@@ -35,7 +35,7 @@ public class Task {
     private String description;
 
     @Column(nullable = false)
-    private boolean completed;
+    private boolean completed = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
