@@ -7,7 +7,7 @@ import org.nakrut.model.Category;
 public record UpdateTaskRequest(
         @NotBlank String title,
         String description,
-        boolean completed,
+        @NotNull Boolean completed,
         @NotNull Category category
 ) {
 }
