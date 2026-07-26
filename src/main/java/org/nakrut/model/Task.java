@@ -28,7 +28,7 @@ public class Task {
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String title;
 
     @Column(columnDefinition = "text")
