@@ -12,7 +12,7 @@ class UpdateTaskRequestTests {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
-    void rejectsMissingCompletedStatus() {
+    void rejectsMissingStatus() {
         UpdateTaskRequest request = new UpdateTaskRequest(
                 "Learn Spring Boot",
                 "Build a CRUD API",
@@ -21,6 +21,6 @@ class UpdateTaskRequestTests {
         );
 
         assertThat(validator.validate(request))
-                .anyMatch(violation -> violation.getPropertyPath().toString().equals("completed"));
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("status"));
     }
 }

@@ -34,8 +34,9 @@ public class Task {
     @Column(columnDefinition = "text")
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean completed = false;
+    private TaskStatus status = TaskStatus.TODO;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
