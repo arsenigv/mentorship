@@ -20,6 +20,7 @@ import org.nakrut.controller.dto.CreateTaskRequest;
 import org.nakrut.controller.dto.TaskResponse;
 import org.nakrut.controller.dto.UpdateTaskRequest;
 import org.nakrut.model.Category;
+import org.nakrut.model.TaskStatus;
 import org.nakrut.service.TaskService;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,7 +41,7 @@ class TaskControllerTests {
 
     @Test
     void returnsAllTasks() throws Exception {
-        when(taskService.findAll()).thenReturn(List.of(taskResponse(false)));
+        when(taskService.findAll()).thenReturn(List.of(taskResponse(TaskStatus.TODO)));
 
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
@@ -50,17 +51,17 @@ class TaskControllerTests {
 
     @Test
     void returnsTaskById() throws Exception {
-        when(taskService.findById(1L)).thenReturn(taskResponse(false));
+        when(taskService.findById(1L)).thenReturn(taskResponse(TaskStatus.TODO));
 
         mockMvc.perform(get("/api/tasks/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.completed").value(false));
+                .andExpect(jsonPath("$.status").value("TODO"));
     }
 
     @Test
     void createsTask() throws Exception {
-        when(taskService.create(any(CreateTaskRequest.class))).thenReturn(taskResponse(false));
+        when(taskService.create(any(CreateTaskRequest.class))).thenReturn(taskResponse(TaskStatus.TODO));
 
         mockMvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -74,13 +75,13 @@ class TaskControllerTests {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.completed").value(false));
+                .andExpect(jsonPath("$.status").value("TODO"));
     }
 
     @Test
     void updatesTask() throws Exception {
         when(taskService.update(any(Long.class), any(UpdateTaskRequest.class)))
-                .thenReturn(taskResponse(true));
+                .thenReturn(taskResponse(TaskStatus.IN_PROGRESS));
 
         mockMvc.perform(put("/api/tasks/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -88,13 +89,13 @@ class TaskControllerTests {
                                 {
                                   "title":"Learn Spring",
                                   "description":"CRUD API completed",
-                                  "completed":true,
+                                  "status":"IN_PROGRESS",
                                   "category":"EDUCATION"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.completed").value(true));
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
     }
 
     @Test
@@ -105,12 +106,12 @@ class TaskControllerTests {
         verify(taskService).delete(1L);
     }
 
-    private TaskResponse taskResponse(boolean completed) {
+    private TaskResponse taskResponse(TaskStatus status) {
         return new TaskResponse(
                 1L,
                 "Learn Spring",
                 "Build a CRUD API",
-                completed,
+                status,
                 Category.EDUCATION,
                 1L
         );

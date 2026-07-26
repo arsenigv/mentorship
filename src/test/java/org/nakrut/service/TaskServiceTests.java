@@ -14,6 +14,7 @@ import org.nakrut.controller.dto.CreateTaskRequest;
 import org.nakrut.controller.dto.TaskResponse;
 import org.nakrut.model.Category;
 import org.nakrut.model.Task;
+import org.nakrut.model.TaskStatus;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
@@ -31,7 +32,7 @@ class TaskServiceTests {
     private TaskService taskService;
 
     @Test
-    void createsTaskAsNotCompleted() {
+    void createsTaskWithTodoStatus() {
         User user = new User("arseni");
         CreateTaskRequest request = new CreateTaskRequest(
                 "Learn Spring",
@@ -45,6 +46,6 @@ class TaskServiceTests {
 
         TaskResponse response = taskService.create(request);
 
-        assertThat(response.completed()).isFalse();
+        assertThat(response.status()).isEqualTo(TaskStatus.TODO);
     }
 }

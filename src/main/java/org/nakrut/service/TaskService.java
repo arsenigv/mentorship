@@ -45,7 +45,7 @@ public class TaskService {
 
         task.setTitle(request.title());
         task.setDescription(request.description());
-        task.setCompleted(request.completed());
+        task.setStatus(request.status());
         task.setCategory(request.category());
 
         return toResponse(taskRepository.save(task));
@@ -72,7 +72,7 @@ public class TaskService {
                 task.getId(),
                 task.getTitle(),
                 task.getDescription(),
-                task.isCompleted(),
+                task.getStatus(),
                 task.getCategory(),
                 task.getUser().getId()
         );
