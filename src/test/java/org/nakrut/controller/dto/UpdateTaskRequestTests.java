@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
+import org.nakrut.dto.UpdateTaskRequest;
 import org.nakrut.model.Category;
 
 class UpdateTaskRequestTests {

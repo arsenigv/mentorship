@@ -2,9 +2,9 @@ package org.nakrut.service;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.nakrut.controller.dto.CreateUserRequest;
-import org.nakrut.controller.dto.UpdateUserRequest;
-import org.nakrut.controller.dto.UserResponse;
+import org.nakrut.dto.CreateUserRequest;
+import org.nakrut.dto.UpdateUserRequest;
+import org.nakrut.dto.UserResponse;
 import org.nakrut.exception.ResourceConflictException;
 import org.nakrut.exception.ResourceNotFoundException;
 import org.nakrut.model.User;

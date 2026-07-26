@@ -1,4 +1,4 @@
-package org.nakrut.controller.dto;
+package org.nakrut.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.nakrut.model.Category;

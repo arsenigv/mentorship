@@ -2,9 +2,9 @@ package org.nakrut.service;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.nakrut.controller.dto.CreateTaskRequest;
-import org.nakrut.controller.dto.TaskResponse;
-import org.nakrut.controller.dto.UpdateTaskRequest;
+import org.nakrut.dto.CreateTaskRequest;
+import org.nakrut.dto.TaskResponse;
+import org.nakrut.dto.UpdateTaskRequest;
 import org.nakrut.exception.ResourceNotFoundException;
 import org.nakrut.model.Task;
 import org.nakrut.model.User;
