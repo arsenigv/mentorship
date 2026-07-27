@@ -2,6 +2,7 @@ package org.nakrut.service;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.dto.UpdateTaskRequest;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TaskService {
 
     private final TaskRepository taskRepository;
@@ -38,30 +40,41 @@ public class TaskService {
     public TaskResponse create(CreateTaskRequest request) {
         User user = findUser(request.userId());
         Task task = taskMapper.toEntity(request, user);
-        return taskMapper.toResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+        log.info("Task created: id={}, userId={}", savedTask.getId(), request.userId());
+        return taskMapper.toResponse(savedTask);
     }
 
     @Transactional
     public TaskResponse update(Long id, UpdateTaskRequest request) {
         Task task = findTask(id);
         taskMapper.updateEntity(request, task);
-        return taskMapper.toResponse(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+        log.info("Task updated: id={}, status={}", savedTask.getId(), savedTask.getStatus());
+        return taskMapper.toResponse(savedTask);
     }
 
     @Transactional
     public void delete(Long id) {
         Task task = findTask(id);
         taskRepository.delete(task);
+        log.info("Task deleted: id={}", id);
     }
 
     private Task findTask(Long id) {
         return taskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + id));
+                .orElseThrow(() -> {
+                    log.warn("Task not found: id={}", id);
+                    return new ResourceNotFoundException("Task not found: " + id);
+                });
     }
 
     private User findUser(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+                .orElseThrow(() -> {
+                    log.warn("Task owner not found: userId={}", id);
+                    return new ResourceNotFoundException("User not found: " + id);
+                });
     }
 
 }

@@ -2,6 +2,7 @@ package org.nakrut.service;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.nakrut.dto.CreateUserRequest;
 import org.nakrut.dto.UpdateUserRequest;
 import org.nakrut.dto.UserResponse;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -39,10 +41,13 @@ public class UserService {
     public UserResponse create(CreateUserRequest request) {
         String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsername(username)) {
+            log.warn("User creation rejected: username already exists");
             throw new DuplicateUsernameException(username);
         }
 
-        return userMapper.toResponse(userRepository.save(userMapper.toEntity(request)));
+        User savedUser = userRepository.save(userMapper.toEntity(request));
+        log.info("User created: id={}", savedUser.getId());
+        return userMapper.toResponse(savedUser);
     }
 
     @Transactional
@@ -50,25 +55,33 @@ public class UserService {
         User user = findUser(id);
         String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsernameAndIdNot(username, id)) {
+            log.warn("User update rejected: id={}, username already exists", id);
             throw new DuplicateUsernameException(username);
         }
 
         userMapper.updateEntity(request, user);
-        return userMapper.toResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        log.info("User updated: id={}", savedUser.getId());
+        return userMapper.toResponse(savedUser);
     }
 
     @Transactional
     public void delete(Long id) {
         User user = findUser(id);
         if (taskRepository.existsByUserId(id)) {
+            log.warn("User deletion rejected: id={}, assigned tasks exist", id);
             throw new UserHasAssignedTasksException(id);
         }
 
         userRepository.delete(user);
+        log.info("User deleted: id={}", id);
     }
 
     private User findUser(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+                .orElseThrow(() -> {
+                    log.warn("User not found: id={}", id);
+                    return new ResourceNotFoundException("User not found: " + id);
+                });
     }
 }
