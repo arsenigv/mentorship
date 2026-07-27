@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.nakrut.dto.CreateUserRequest;
 import org.nakrut.dto.UpdateUserRequest;
 import org.nakrut.dto.UserResponse;
+import org.nakrut.exception.GlobalExceptionHandler;
 import org.nakrut.service.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,7 +35,9 @@ class UserControllerTests {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test

@@ -5,8 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.nakrut.dto.CreateUserRequest;
 import org.nakrut.dto.UpdateUserRequest;
 import org.nakrut.dto.UserResponse;
-import org.nakrut.exception.ResourceConflictException;
+import org.nakrut.exception.DuplicateUsernameException;
 import org.nakrut.exception.ResourceNotFoundException;
+import org.nakrut.exception.UserHasAssignedTasksException;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
@@ -36,7 +37,7 @@ public class UserService {
     public UserResponse create(CreateUserRequest request) {
         String username = request.username().trim();
         if (userRepository.existsByUsername(username)) {
-            throw new ResourceConflictException("Username already exists: " + username);
+            throw new DuplicateUsernameException(username);
         }
 
         return toResponse(userRepository.save(new User(username)));
@@ -47,7 +48,7 @@ public class UserService {
         User user = findUser(id);
         String username = request.username().trim();
         if (userRepository.existsByUsernameAndIdNot(username, id)) {
-            throw new ResourceConflictException("Username already exists: " + username);
+            throw new DuplicateUsernameException(username);
         }
 
         user.setUsername(username);
@@ -58,7 +59,7 @@ public class UserService {
     public void delete(Long id) {
         User user = findUser(id);
         if (taskRepository.existsByUserId(id)) {
-            throw new ResourceConflictException("Cannot delete user with assigned tasks: " + id);
+            throw new UserHasAssignedTasksException(id);
         }
 
         userRepository.delete(user);

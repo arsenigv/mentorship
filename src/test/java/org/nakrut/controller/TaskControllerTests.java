@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.dto.UpdateTaskRequest;
+import org.nakrut.exception.GlobalExceptionHandler;
 import org.nakrut.model.Category;
 import org.nakrut.model.TaskStatus;
 import org.nakrut.service.TaskService;
@@ -36,7 +37,9 @@ class TaskControllerTests {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new TaskController(taskService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new TaskController(taskService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
