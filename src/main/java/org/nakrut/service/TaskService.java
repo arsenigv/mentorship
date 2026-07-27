@@ -12,6 +12,9 @@ import org.nakrut.model.Task;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,7 @@ public class TaskService {
     private final TaskMapper taskMapper;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "tasks")
     public List<TaskResponse> findAll() {
         return taskRepository.findAll().stream()
                 .map(taskMapper::toResponse)
@@ -32,11 +36,13 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "tasksById", key = "#id")
     public TaskResponse findById(Long id) {
         return taskMapper.toResponse(findTask(id));
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "tasks", allEntries = true)
     public TaskResponse create(CreateTaskRequest request) {
         User user = findUser(request.userId());
         Task task = taskMapper.toEntity(request, user);
@@ -46,6 +52,10 @@ public class TaskService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "tasks", allEntries = true),
+            @CacheEvict(cacheNames = "tasksById", key = "#id")
+    })
     public TaskResponse update(Long id, UpdateTaskRequest request) {
         Task task = findTask(id);
         taskMapper.updateEntity(request, task);
@@ -55,6 +65,10 @@ public class TaskService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "tasks", allEntries = true),
+            @CacheEvict(cacheNames = "tasksById", key = "#id")
+    })
     public void delete(Long id) {
         Task task = findTask(id);
         taskRepository.delete(task);

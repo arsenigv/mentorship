@@ -13,6 +13,9 @@ import org.nakrut.mapper.UserMapper;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,7 @@ public class UserService {
     private final UserMapper userMapper;
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "users")
     public List<UserResponse> findAll() {
         return userRepository.findAll().stream()
                 .map(userMapper::toResponse)
@@ -33,11 +37,13 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "usersById", key = "#id")
     public UserResponse findById(Long id) {
         return userMapper.toResponse(findUser(id));
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "users", allEntries = true)
     public UserResponse create(CreateUserRequest request) {
         String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsername(username)) {
@@ -51,6 +57,10 @@ public class UserService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "users", allEntries = true),
+            @CacheEvict(cacheNames = "usersById", key = "#id")
+    })
     public UserResponse update(Long id, UpdateUserRequest request) {
         User user = findUser(id);
         String username = userMapper.normalizedUsername(request);
@@ -66,6 +76,10 @@ public class UserService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "users", allEntries = true),
+            @CacheEvict(cacheNames = "usersById", key = "#id")
+    })
     public void delete(Long id) {
         User user = findUser(id);
         if (taskRepository.existsByUserId(id)) {
