@@ -8,6 +8,7 @@ import org.nakrut.dto.UserResponse;
 import org.nakrut.exception.DuplicateUsernameException;
 import org.nakrut.exception.ResourceNotFoundException;
 import org.nakrut.exception.UserHasAssignedTasksException;
+import org.nakrut.mapper.UserMapper;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
@@ -20,39 +21,40 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final TaskRepository taskRepository;
+    private final UserMapper userMapper;
 
     @Transactional(readOnly = true)
     public List<UserResponse> findAll() {
         return userRepository.findAll().stream()
-                .map(this::toResponse)
+                .map(userMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public UserResponse findById(Long id) {
-        return toResponse(findUser(id));
+        return userMapper.toResponse(findUser(id));
     }
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
-        String username = request.username().trim();
+        String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsername(username)) {
             throw new DuplicateUsernameException(username);
         }
 
-        return toResponse(userRepository.save(new User(username)));
+        return userMapper.toResponse(userRepository.save(userMapper.toEntity(request)));
     }
 
     @Transactional
     public UserResponse update(Long id, UpdateUserRequest request) {
         User user = findUser(id);
-        String username = request.username().trim();
+        String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsernameAndIdNot(username, id)) {
             throw new DuplicateUsernameException(username);
         }
 
-        user.setUsername(username);
-        return toResponse(userRepository.save(user));
+        userMapper.updateEntity(request, user);
+        return userMapper.toResponse(userRepository.save(user));
     }
 
     @Transactional
@@ -68,9 +70,5 @@ public class UserService {
     private User findUser(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
-    }
-
-    private UserResponse toResponse(User user) {
-        return new UserResponse(user.getId(), user.getUsername());
     }
 }

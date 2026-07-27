@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.nakrut.dto.CreateUserRequest;
 import org.nakrut.dto.UserResponse;
 import org.nakrut.exception.DuplicateUsernameException;
 import org.nakrut.exception.UserHasAssignedTasksException;
+import org.nakrut.mapper.UserMapper;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
@@ -27,6 +29,9 @@ class UserServiceTests {
 
     @Mock
     private TaskRepository taskRepository;
+
+    @Spy
+    private UserMapper userMapper = new UserMapper();
 
     @InjectMocks
     private UserService userService;

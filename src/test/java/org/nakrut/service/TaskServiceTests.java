@@ -9,9 +9,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
+import org.nakrut.mapper.TaskMapper;
 import org.nakrut.model.Category;
 import org.nakrut.model.Task;
 import org.nakrut.model.TaskStatus;
@@ -27,6 +29,9 @@ class TaskServiceTests {
 
     @Mock
     private UserRepository userRepository;
+
+    @Spy
+    private TaskMapper taskMapper = new TaskMapper();
 
     @InjectMocks
     private TaskService taskService;

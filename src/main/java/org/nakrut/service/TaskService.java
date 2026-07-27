@@ -6,6 +6,7 @@ import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.dto.UpdateTaskRequest;
 import org.nakrut.exception.ResourceNotFoundException;
+import org.nakrut.mapper.TaskMapper;
 import org.nakrut.model.Task;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
@@ -19,36 +20,32 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final TaskMapper taskMapper;
 
     @Transactional(readOnly = true)
     public List<TaskResponse> findAll() {
         return taskRepository.findAll().stream()
-                .map(this::toResponse)
+                .map(taskMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public TaskResponse findById(Long id) {
-        return toResponse(findTask(id));
+        return taskMapper.toResponse(findTask(id));
     }
 
     @Transactional
     public TaskResponse create(CreateTaskRequest request) {
         User user = findUser(request.userId());
-        Task task = new Task(request.title(), request.description(), request.category(), user);
-        return toResponse(taskRepository.save(task));
+        Task task = taskMapper.toEntity(request, user);
+        return taskMapper.toResponse(taskRepository.save(task));
     }
 
     @Transactional
     public TaskResponse update(Long id, UpdateTaskRequest request) {
         Task task = findTask(id);
-
-        task.setTitle(request.title());
-        task.setDescription(request.description());
-        task.setStatus(request.status());
-        task.setCategory(request.category());
-
-        return toResponse(taskRepository.save(task));
+        taskMapper.updateEntity(request, task);
+        return taskMapper.toResponse(taskRepository.save(task));
     }
 
     @Transactional
@@ -67,14 +64,4 @@ public class TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
     }
 
-    private TaskResponse toResponse(Task task) {
-        return new TaskResponse(
-                task.getId(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getStatus(),
-                task.getCategory(),
-                task.getUser().getId()
-        );
-    }
 }
