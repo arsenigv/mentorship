@@ -19,7 +19,6 @@ import lombok.Setter;
 @Entity
 @Table(name = "tasks")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Task {
 
@@ -29,17 +28,21 @@ public class Task {
     private Long id;
 
     @Column(nullable = false, length = 255)
+    @Setter
     private String title;
 
     @Column(columnDefinition = "text")
+    @Setter
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Setter
     private TaskStatus status = TaskStatus.TODO;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Setter
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -3,6 +3,7 @@ package org.nakrut.service;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.nakrut.config.CacheNames;
 import org.nakrut.dto.CreateUserRequest;
 import org.nakrut.dto.UpdateUserRequest;
 import org.nakrut.dto.UserResponse;
@@ -29,7 +30,7 @@ public class UserService {
     private final UserMapper userMapper;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "users")
+    @Cacheable(cacheNames = CacheNames.USERS)
     public List<UserResponse> findAll() {
         return userRepository.findAll().stream()
                 .map(userMapper::toResponse)
@@ -37,13 +38,13 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "usersById", key = "#id")
+    @Cacheable(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
     public UserResponse findById(Long id) {
         return userMapper.toResponse(findUser(id));
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "users", allEntries = true)
+    @CacheEvict(cacheNames = CacheNames.USERS, allEntries = true)
     public UserResponse create(CreateUserRequest request) {
         String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsername(username)) {
@@ -58,8 +59,8 @@ public class UserService {
 
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "users", allEntries = true),
-            @CacheEvict(cacheNames = "usersById", key = "#id")
+            @CacheEvict(cacheNames = CacheNames.USERS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
     })
     public UserResponse update(Long id, UpdateUserRequest request) {
         User user = findUser(id);
@@ -77,8 +78,8 @@ public class UserService {
 
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "users", allEntries = true),
-            @CacheEvict(cacheNames = "usersById", key = "#id")
+            @CacheEvict(cacheNames = CacheNames.USERS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
     })
     public void delete(Long id) {
         User user = findUser(id);

@@ -3,6 +3,7 @@ package org.nakrut.service;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.nakrut.config.CacheNames;
 import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.dto.UpdateTaskRequest;
@@ -28,7 +29,7 @@ public class TaskService {
     private final TaskMapper taskMapper;
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "tasks")
+    @Cacheable(cacheNames = CacheNames.TASKS)
     public List<TaskResponse> findAll() {
         return taskRepository.findAll().stream()
                 .map(taskMapper::toResponse)
@@ -36,13 +37,13 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "tasksById", key = "#id")
+    @Cacheable(cacheNames = CacheNames.TASKS_BY_ID, key = "#id")
     public TaskResponse findById(Long id) {
         return taskMapper.toResponse(findTask(id));
     }
 
     @Transactional
-    @CacheEvict(cacheNames = "tasks", allEntries = true)
+    @CacheEvict(cacheNames = CacheNames.TASKS, allEntries = true)
     public TaskResponse create(CreateTaskRequest request) {
         User user = findUser(request.userId());
         Task task = taskMapper.toEntity(request, user);
@@ -53,8 +54,8 @@ public class TaskService {
 
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "tasks", allEntries = true),
-            @CacheEvict(cacheNames = "tasksById", key = "#id")
+            @CacheEvict(cacheNames = CacheNames.TASKS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.TASKS_BY_ID, key = "#id")
     })
     public TaskResponse update(Long id, UpdateTaskRequest request) {
         Task task = findTask(id);
@@ -66,8 +67,8 @@ public class TaskService {
 
     @Transactional
     @Caching(evict = {
-            @CacheEvict(cacheNames = "tasks", allEntries = true),
-            @CacheEvict(cacheNames = "tasksById", key = "#id")
+            @CacheEvict(cacheNames = CacheNames.TASKS, allEntries = true),
+            @CacheEvict(cacheNames = CacheNames.TASKS_BY_ID, key = "#id")
     })
     public void delete(Long id) {
         Task task = findTask(id);

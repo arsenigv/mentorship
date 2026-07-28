@@ -14,7 +14,6 @@ import lombok.Setter;
 @Entity
 @Table(name = "app_users")
 @Getter
-@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
@@ -24,6 +23,7 @@ public class User {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @Setter
     private String username;
 
     public User(String username) {

@@ -1,11 +1,17 @@
 package org.nakrut.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.nakrut.config.CacheNames.TASKS;
+import static org.nakrut.config.CacheNames.TASKS_BY_ID;
+import static org.nakrut.config.CacheNames.USERS;
+import static org.nakrut.config.CacheNames.USERS_BY_ID;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +40,7 @@ import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @SpringJUnitConfig(ServiceCacheTests.CacheConfiguration.class)
 class ServiceCacheTests {
@@ -51,12 +58,6 @@ class ServiceCacheTests {
     private TaskRepository taskRepository;
 
     @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private TaskMapper taskMapper;
-
-    @Autowired
     private CacheManager cacheManager;
 
     private User user;
@@ -66,11 +67,14 @@ class ServiceCacheTests {
 
     @BeforeEach
     void setUp() {
-        reset(userRepository, taskRepository, userMapper, taskMapper);
+        reset(userRepository);
+        reset(taskRepository);
         cacheManager.getCacheNames().forEach(name -> cache(name).clear());
 
         user = new User("arseni");
         task = new Task("Learn Spring", "Build a CRUD API", Category.EDUCATION, user);
+        ReflectionTestUtils.setField(user, "id", 1L);
+        ReflectionTestUtils.setField(task, "id", 1L);
         userResponse = new UserResponse(1L, "arseni");
         taskResponse = new TaskResponse(
                 1L,
@@ -83,20 +87,13 @@ class ServiceCacheTests {
 
         when(userRepository.findAll()).thenReturn(List.of(user));
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.save(user)).thenReturn(user);
-        when(userMapper.toEntity(new CreateUserRequest("arseni"))).thenReturn(user);
-        when(userMapper.normalizedUsername(new CreateUserRequest("arseni"))).thenReturn("arseni");
-        when(userMapper.normalizedUsername(new UpdateUserRequest("updated"))).thenReturn("updated");
-        when(userMapper.toResponse(user)).thenReturn(userResponse);
+        doAnswer(invocation -> invocation.getArgument(0, User.class))
+                .when(userRepository).save(any(User.class));
 
         when(taskRepository.findAll()).thenReturn(List.of(task));
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
-        when(taskRepository.save(task)).thenReturn(task);
-        when(taskMapper.toEntity(
-                new CreateTaskRequest("Learn Spring", "Build a CRUD API", Category.EDUCATION, 1L),
-                user
-        )).thenReturn(task);
-        when(taskMapper.toResponse(task)).thenReturn(taskResponse);
+        doAnswer(invocation -> invocation.getArgument(0, Task.class))
+                .when(taskRepository).save(any(Task.class));
     }
 
     @Test
@@ -119,8 +116,8 @@ class ServiceCacheTests {
 
     @Test
     void createEvictsCorrespondingListCache() {
-        cache("users").put(SimpleKey.EMPTY, List.of(userResponse));
-        cache("tasks").put(SimpleKey.EMPTY, List.of(taskResponse));
+        cache(USERS).put(SimpleKey.EMPTY, List.of(userResponse));
+        cache(TASKS).put(SimpleKey.EMPTY, List.of(taskResponse));
 
         userService.create(new CreateUserRequest("arseni"));
         taskService.create(new CreateTaskRequest(
@@ -130,8 +127,8 @@ class ServiceCacheTests {
                 1L
         ));
 
-        assertThat(cache("users").get(SimpleKey.EMPTY)).isNull();
-        assertThat(cache("tasks").get(SimpleKey.EMPTY)).isNull();
+        assertThat(cache(USERS).get(SimpleKey.EMPTY)).isNull();
+        assertThat(cache(TASKS).get(SimpleKey.EMPTY)).isNull();
     }
 
     @Test
@@ -160,17 +157,17 @@ class ServiceCacheTests {
     }
 
     private void populateCaches() {
-        cache("users").put(SimpleKey.EMPTY, List.of(userResponse));
-        cache("usersById").put(1L, userResponse);
-        cache("tasks").put(SimpleKey.EMPTY, List.of(taskResponse));
-        cache("tasksById").put(1L, taskResponse);
+        cache(USERS).put(SimpleKey.EMPTY, List.of(userResponse));
+        cache(USERS_BY_ID).put(1L, userResponse);
+        cache(TASKS).put(SimpleKey.EMPTY, List.of(taskResponse));
+        cache(TASKS_BY_ID).put(1L, taskResponse);
     }
 
     private void assertCachesAreEmpty() {
-        assertThat(cache("users").get(SimpleKey.EMPTY)).isNull();
-        assertThat(cache("usersById").get(1L)).isNull();
-        assertThat(cache("tasks").get(SimpleKey.EMPTY)).isNull();
-        assertThat(cache("tasksById").get(1L)).isNull();
+        assertThat(cache(USERS).get(SimpleKey.EMPTY)).isNull();
+        assertThat(cache(USERS_BY_ID).get(1L)).isNull();
+        assertThat(cache(TASKS).get(SimpleKey.EMPTY)).isNull();
+        assertThat(cache(TASKS_BY_ID).get(1L)).isNull();
     }
 
     private Cache cache(String name) {
@@ -183,7 +180,7 @@ class ServiceCacheTests {
 
         @Bean
         CacheManager cacheManager() {
-            return new ConcurrentMapCacheManager("users", "usersById", "tasks", "tasksById");
+            return new ConcurrentMapCacheManager(USERS, USERS_BY_ID, TASKS, TASKS_BY_ID);
         }
 
         @Bean
@@ -198,12 +195,12 @@ class ServiceCacheTests {
 
         @Bean
         UserMapper userMapper() {
-            return mock(UserMapper.class);
+            return new UserMapper();
         }
 
         @Bean
         TaskMapper taskMapper() {
-            return mock(TaskMapper.class);
+            return new TaskMapper();
         }
 
         @Bean
