@@ -10,6 +10,7 @@ import org.nakrut.dto.UpdateTaskRequest;
 import org.nakrut.exception.ResourceNotFoundException;
 import org.nakrut.mapper.TaskMapper;
 import org.nakrut.model.Task;
+import org.nakrut.model.TaskStatus;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
@@ -32,6 +33,14 @@ public class TaskService {
     @Cacheable(cacheNames = CacheNames.TASKS)
     public List<TaskResponse> findAll() {
         return taskRepository.findAll().stream()
+                .map(taskMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.TASKS, key = "#status")
+    public List<TaskResponse> findAllByStatus(TaskStatus status) {
+        return taskRepository.findAllByStatus(status).stream()
                 .map(taskMapper::toResponse)
                 .toList();
     }

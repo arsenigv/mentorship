@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.dto.UpdateTaskRequest;
+import org.nakrut.model.TaskStatus;
 import org.nakrut.service.TaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +29,11 @@ public class TaskController {
     @GetMapping
     public List<TaskResponse> findAll() {
         return taskService.findAll();
+    }
+
+    @GetMapping("/status/{status}")
+    public List<TaskResponse> findAllByStatus(@PathVariable TaskStatus status) {
+        return taskService.findAllByStatus(status);
     }
 
     @GetMapping("/{id}")

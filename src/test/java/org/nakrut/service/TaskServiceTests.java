@@ -2,8 +2,10 @@ package org.nakrut.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +37,21 @@ class TaskServiceTests {
 
     @InjectMocks
     private TaskService taskService;
+
+    @Test
+    void returnsAllTasksWithRequestedStatus() {
+        User user = new User("arseni");
+        Task task = new Task("Learn Spring", "Build a CRUD API", Category.EDUCATION, user);
+        task.setStatus(TaskStatus.DONE);
+        when(taskRepository.findAllByStatus(TaskStatus.DONE)).thenReturn(List.of(task));
+
+        List<TaskResponse> responses = taskService.findAllByStatus(TaskStatus.DONE);
+
+        assertThat(responses)
+                .extracting(TaskResponse::status)
+                .containsExactly(TaskStatus.DONE);
+        verify(taskRepository).findAllByStatus(TaskStatus.DONE);
+    }
 
     @Test
     void createsTaskWithTodoStatus() {

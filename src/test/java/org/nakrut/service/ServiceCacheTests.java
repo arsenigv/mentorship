@@ -91,6 +91,7 @@ class ServiceCacheTests {
                 .when(userRepository).save(any(User.class));
 
         when(taskRepository.findAll()).thenReturn(List.of(task));
+        when(taskRepository.findAllByStatus(TaskStatus.TODO)).thenReturn(List.of(task));
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
         doAnswer(invocation -> invocation.getArgument(0, Task.class))
                 .when(taskRepository).save(any(Task.class));
@@ -112,6 +113,14 @@ class ServiceCacheTests {
         verify(userRepository, times(1)).findById(1L);
         verify(taskRepository, times(1)).findAll();
         verify(taskRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void cachesTaskListsByStatus() {
+        assertThat(taskService.findAllByStatus(TaskStatus.TODO)).containsExactly(taskResponse);
+        assertThat(taskService.findAllByStatus(TaskStatus.TODO)).containsExactly(taskResponse);
+
+        verify(taskRepository, times(1)).findAllByStatus(TaskStatus.TODO);
     }
 
     @Test

@@ -53,6 +53,27 @@ class TaskControllerTests {
     }
 
     @Test
+    void returnsAllTasksWithRequestedStatus() throws Exception {
+        when(taskService.findAllByStatus(TaskStatus.IN_PROGRESS))
+                .thenReturn(List.of(taskResponse(TaskStatus.IN_PROGRESS)));
+
+        mockMvc.perform(get("/api/tasks/status/IN_PROGRESS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].status").value("IN_PROGRESS"));
+
+        verify(taskService).findAllByStatus(TaskStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void rejectsInvalidTaskStatus() throws Exception {
+        mockMvc.perform(get("/api/tasks/status/INVALID"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Invalid Parameter"))
+                .andExpect(jsonPath("$.detail").value("Parameter 'status' has an invalid value"));
+    }
+
+    @Test
     void returnsTaskById() throws Exception {
         when(taskService.findById(1L)).thenReturn(taskResponse(TaskStatus.TODO));
 
