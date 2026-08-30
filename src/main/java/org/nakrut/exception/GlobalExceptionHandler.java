@@ -68,7 +68,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             Exception exception,
             WebRequest request
     ) {
-        log.error("Unexpected error while processing request", exception);
+        log.error("unexpected error while processing request", exception);
         return problem(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
