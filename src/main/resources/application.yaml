@@ -1,6 +1,4 @@
 spring:
-  profiles:
-    default: dev
   cache:
     type: redis
     cache-names:
@@ -11,6 +9,8 @@ spring:
     redis:
       time-to-live: 10m
       cache-null-values: false
+  profiles:
+    default: dev
   data:
     redis:
       host: ${REDIS_HOST:localhost}

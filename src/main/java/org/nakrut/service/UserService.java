@@ -63,7 +63,7 @@ public class UserService {
             @CacheEvict(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
     })
     public UserResponse update(Long id, UpdateUserRequest request) {
-        User user = findUser(id);
+        var user = findUser(id);
         String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsernameAndIdNot(username, id)) {
             log.warn("User update rejected: id={}, username already exists", id);
@@ -82,7 +82,7 @@ public class UserService {
             @CacheEvict(cacheNames = CacheNames.USERS_BY_ID, key = "#id")
     })
     public void delete(Long id) {
-        User user = findUser(id);
+        var user = findUser(id);
         if (taskRepository.existsByUserId(id)) {
             log.warn("User deletion rejected: id={}, assigned tasks exist", id);
             throw new UserHasAssignedTasksException(id);
