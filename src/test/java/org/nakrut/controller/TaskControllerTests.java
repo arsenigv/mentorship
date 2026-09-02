@@ -1,6 +1,8 @@
 package org.nakrut.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -14,15 +16,21 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.nakrut.dto.CreateTaskRequest;
+import org.nakrut.dto.PageResponse;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.dto.UpdateTaskRequest;
 import org.nakrut.exception.GlobalExceptionHandler;
+import org.nakrut.exception.InvalidSortFieldException;
 import org.nakrut.model.Category;
 import org.nakrut.model.TaskStatus;
 import org.nakrut.service.TaskService;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -37,32 +45,45 @@ class TaskControllerTests {
 
     @BeforeEach
     void setUp() {
+        var pageableResolver = new PageableHandlerMethodArgumentResolver();
+        pageableResolver.setMaxPageSize(100);
+
         mockMvc = MockMvcBuilders.standaloneSetup(new TaskController(taskService))
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(pageableResolver)
                 .build();
     }
 
     @Test
     void returnsAllTasks() throws Exception {
-        when(taskService.findAll()).thenReturn(List.of(taskResponse(TaskStatus.TODO)));
+        when(taskService.findAll(any(Pageable.class)))
+                .thenReturn(pageResponse((TaskStatus.TODO)));
 
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].title").value("Learn Spring"));
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Learn Spring"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
     void returnsAllTasksWithRequestedStatus() throws Exception {
-        when(taskService.findAllByStatus(TaskStatus.IN_PROGRESS))
-                .thenReturn(List.of(taskResponse(TaskStatus.IN_PROGRESS)));
+        when(taskService.findAllByStatus(
+                eq(TaskStatus.IN_PROGRESS),
+                any(Pageable.class)
+        )).thenReturn(pageResponse(TaskStatus.IN_PROGRESS));
 
         mockMvc.perform(get("/api/tasks/status/IN_PROGRESS"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].status").value("IN_PROGRESS"));
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("IN_PROGRESS"));
 
-        verify(taskService).findAllByStatus(TaskStatus.IN_PROGRESS);
+        verify(taskService).findAllByStatus(
+                eq(TaskStatus.IN_PROGRESS),
+                any(Pageable.class)
+        );
     }
 
     @Test
@@ -71,6 +92,18 @@ class TaskControllerTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Invalid Parameter"))
                 .andExpect(jsonPath("$.detail").value("Parameter 'status' has an invalid value"));
+    }
+
+    @Test
+    void rejectsUnsupportedTaskSortField() throws Exception {
+        when(taskService.findAll(any(Pageable.class)))
+                .thenThrow(new InvalidSortFieldException("description"));
+        mockMvc.perform(get("/api/tasks")
+                .param("sort", "description, asc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Invalid Parameter"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.detail").value("Unsupported task sort field: description"));
     }
 
     @Test
@@ -130,6 +163,34 @@ class TaskControllerTests {
         verify(taskService).delete(1L);
     }
 
+    @Test
+    void forwardsPagingAndSortingWithCappedPageSize() throws Exception {
+        when(taskService.findAll(any(Pageable.class)))
+                .thenReturn(pageResponse(TaskStatus.TODO));
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("page", "2")
+                        .param("size", "500")
+                        .param("sort", "status,desc")
+                        .param("sort", "title,asc"))
+                .andExpect(status().isOk());
+
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskService).findAll(pageableCaptor.capture());
+
+        var pageable = pageableCaptor.getValue();
+        var orders = pageable.getSort().toList();
+
+        assertThat(pageable.getPageNumber()).isEqualTo(2);
+        assertThat(pageable.getPageSize()).isEqualTo(100);
+        assertThat(orders)
+                .extracting(Sort.Order::getProperty)
+                .containsExactly("status", "title");
+        assertThat(orders)
+                .extracting(Sort.Order::getDirection)
+                .containsExactly(Sort.Direction.DESC, Sort.Direction.ASC);
+    }
+
     private TaskResponse taskResponse(TaskStatus status) {
         return new TaskResponse(
                 1L,
@@ -138,6 +199,18 @@ class TaskControllerTests {
                 status,
                 Category.EDUCATION,
                 1L
+        );
+    }
+
+    private PageResponse<TaskResponse> pageResponse(TaskStatus status) {
+        return new PageResponse<>(
+                List.of(taskResponse(status)),
+                0,
+                20,
+                1,
+                1,
+                true,
+                true
         );
     }
 }

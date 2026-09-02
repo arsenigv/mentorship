@@ -1,7 +1,9 @@
 package org.nakrut.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -9,12 +11,14 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
+import org.nakrut.exception.InvalidSortFieldException;
 import org.nakrut.mapper.TaskMapper;
 import org.nakrut.model.Category;
 import org.nakrut.model.Task;
@@ -22,6 +26,10 @@ import org.nakrut.model.TaskStatus;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTests {
@@ -39,18 +47,50 @@ class TaskServiceTests {
     private TaskService taskService;
 
     @Test
-    void returnsAllTasksWithRequestedStatus() {
-        User user = new User("arseni");
-        Task task = new Task("Learn Spring", "Build a CRUD API", Category.EDUCATION, user);
+    void returnPagedTasksWithWorkflowStatusSortAndIdTieBreaker(){
+        var user = new User("arseni");
+        var task = new Task(
+                "Learn Spring",
+                "Build a CRUD API",
+                Category.EDUCATION,
+                user
+        );
+
         task.setStatus(TaskStatus.DONE);
-        when(taskRepository.findAllByStatus(TaskStatus.DONE)).thenReturn(List.of(task));
 
-        List<TaskResponse> responses = taskService.findAllByStatus(TaskStatus.DONE);
+        var requestedPageable = PageRequest.of(1, 5, Sort.by(Sort.Order.desc("status")));
+        var repositoryPage = new PageImpl<>(List.of(task), PageRequest.of(1,5), 6);
 
-        assertThat(responses)
+        when(taskRepository.findAllByStatus(
+                eq(TaskStatus.DONE),
+                any(Pageable.class)
+        )).thenReturn(repositoryPage);
+
+        var response = taskService.findAllByStatus(TaskStatus.DONE, requestedPageable);
+
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findAllByStatus(
+                eq(TaskStatus.DONE),
+                pageableCaptor.capture()
+        );
+
+        var orders = pageableCaptor.getValue().getSort().toList();
+
+        assertThat(orders)
+                .extracting(Sort.Order::getProperty)
+                .containsExactly("statusSortOrder", "id");
+        assertThat(orders)
+                .extracting(Sort.Order::getDirection)
+                .containsExactly(Sort.Direction.DESC, Sort.Direction.ASC);
+
+        assertThat(response.content())
                 .extracting(TaskResponse::status)
                 .containsExactly(TaskStatus.DONE);
-        verify(taskRepository).findAllByStatus(TaskStatus.DONE);
+        assertThat(response.page()).isEqualTo(1);
+        assertThat(response.size()).isEqualTo(5);
+        assertThat(response.totalElements()).isEqualTo(6);
+        assertThat(response.totalPages()).isEqualTo(2);
+        assertThat(response.last()).isTrue();
     }
 
     @Test
@@ -69,5 +109,18 @@ class TaskServiceTests {
         TaskResponse response = taskService.create(request);
 
         assertThat(response.status()).isEqualTo(TaskStatus.TODO);
+    }
+
+    @Test
+    void rejectsUnsupportedTaskSortField() {
+        var pageable = PageRequest.of(
+                0,
+                20,
+                Sort.by("description")
+        );
+
+        assertThatThrownBy(() -> taskService.findAll(pageable))
+                .isInstanceOf(InvalidSortFieldException.class)
+                .hasMessage("Unsupported task sort field: description");
     }
 }

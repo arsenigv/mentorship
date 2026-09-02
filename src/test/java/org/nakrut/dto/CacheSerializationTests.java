@@ -35,6 +35,30 @@ class CacheSerializationTests {
         assertThat(roundTrip(List.of(response))).isEqualTo(List.of(response));
     }
 
+    @Test
+    void serializesCachedTaskPageResponses() {
+        var task = new TaskResponse(
+                1L,
+                "Learn Spring",
+                "Build a CRUD API",
+                TaskStatus.TODO,
+                Category.EDUCATION,
+                1L
+        );
+        var page = new PageResponse<>(
+                List.of(task),
+                0,
+                20,
+                1,
+                1,
+                true,
+                true
+        );
+
+        assertThat(roundTrip(page)).isEqualTo(page);
+    }
+
+
     private Object roundTrip(Object value) {
         return serializer.deserialize(serializer.serialize(value));
     }

@@ -2,12 +2,16 @@ package org.nakrut.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nakrut.config.CacheNames;
 import org.nakrut.dto.CreateTaskRequest;
+import org.nakrut.dto.PageResponse;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.dto.UpdateTaskRequest;
+import org.nakrut.exception.InvalidSortFieldException;
 import org.nakrut.exception.ResourceNotFoundException;
 import org.nakrut.mapper.TaskMapper;
 import org.nakrut.model.Task;
@@ -18,6 +22,9 @@ import org.nakrut.repository.UserRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,24 +33,37 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class TaskService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "id",
+            "title",
+            "status"
+    );
+
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TaskMapper taskMapper;
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.TASKS)
-    public List<TaskResponse> findAll() {
-        return taskRepository.findAll().stream()
-                .map(taskMapper::toResponse)
-                .toList();
+    public PageResponse<TaskResponse> findAll(Pageable pageable) {
+        var normalizedPageable = normalizePageable(pageable);
+        var tasks = taskRepository.findAll(normalizedPageable)
+                .map(taskMapper::toResponse);
+
+        return PageResponse.from(tasks);
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheNames.TASKS, key = "#status")
-    public List<TaskResponse> findAllByStatus(TaskStatus status) {
-        return taskRepository.findAllByStatus(status).stream()
-                .map(taskMapper::toResponse)
-                .toList();
+    @Cacheable(cacheNames = CacheNames.TASKS)
+    public PageResponse<TaskResponse> findAllByStatus(
+            TaskStatus status,
+            Pageable pageable
+    ) {
+        var normalizedPageable = normalizePageable(pageable);
+        var tasks = taskRepository.findAllByStatus(status, normalizedPageable)
+                .map(taskMapper::toResponse);
+
+        return PageResponse.from(tasks);
     }
 
     @Transactional(readOnly = true)
@@ -100,6 +120,39 @@ public class TaskService {
                     log.warn("Task owner not found: userId={}", id);
                     return new ResourceNotFoundException("User not found: " + id);
                 });
+    }
+
+    private Pageable normalizePageable(Pageable pageable) {
+        var orders = new ArrayList<Sort.Order>();
+        var containsIdSort = false;
+
+        for(var order : pageable.getSort()) {
+            var property = order.getProperty();
+
+            if (!ALLOWED_SORT_FIELDS.contains(property)) {
+                throw new InvalidSortFieldException(property);
+            }
+
+            if("id".equals(property)) {
+                containsIdSort = true;
+            }
+
+            var mappedProperty = "status".equals(property)
+                    ? "statusSortOrder"
+                    : property;
+
+            orders.add(order.withProperty(mappedProperty));
+        }
+
+        if(!containsIdSort) {
+            orders.add(Sort.Order.asc("id"));
+        }
+
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(orders)
+        );
     }
 
 }

@@ -15,6 +15,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Formula;
 
 @Entity
 @Table(name = "tasks")
@@ -39,6 +40,15 @@ public class Task {
     @Column(nullable = false)
     @Setter
     private TaskStatus status = TaskStatus.TODO;
+    @Formula("""
+            CASE status
+                WHEN 'TODO' THEN 0
+                WHEN 'IN_PROGRESS' THEN 1
+                WHEN 'DONE' THEN 2
+                ELSE 3
+            END
+            """)
+    private Integer statusSortOrder;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

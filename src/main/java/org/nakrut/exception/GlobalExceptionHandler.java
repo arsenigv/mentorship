@@ -77,6 +77,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidSortFieldException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidSortField(
+            InvalidSortFieldException exception,
+            WebRequest request
+    ){
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Invalid Parameter",
+                exception.getMessage(),
+                request
+        );
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException exception,

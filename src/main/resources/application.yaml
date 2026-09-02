@@ -17,6 +17,9 @@ spring:
       port: ${REDIS_PORT:6379}
       repositories:
         enabled: false
+    web:
+      pageable:
+        max-page-size: 100
   jpa:
     hibernate:
       ddl-auto: validate
