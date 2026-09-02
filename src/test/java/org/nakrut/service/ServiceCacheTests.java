@@ -2,7 +2,6 @@ package org.nakrut.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -14,6 +13,7 @@ import static org.nakrut.config.CacheNames.TASKS_BY_ID;
 import static org.nakrut.config.CacheNames.USERS;
 import static org.nakrut.config.CacheNames.USERS_BY_ID;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,11 +39,14 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @SpringJUnitConfig(ServiceCacheTests.CacheConfiguration.class)
 class ServiceCacheTests {
+
+    private static final LocalDate DUE_DATE = LocalDate.of(2026, 9, 10);
 
     @Autowired
     private UserService userService;
@@ -74,7 +77,7 @@ class ServiceCacheTests {
         cacheManager.getCacheNames().forEach(name -> cache(name).clear());
 
         user = new User("arseni");
-        task = new Task("Learn Spring", "Build a CRUD API", Category.EDUCATION, user);
+        task = new Task("Learn Spring", "Build a CRUD API", DUE_DATE, Category.EDUCATION, user);
         ReflectionTestUtils.setField(user, "id", 1L);
         ReflectionTestUtils.setField(task, "id", 1L);
         userResponse = new UserResponse(1L, "arseni");
@@ -83,6 +86,7 @@ class ServiceCacheTests {
                 "Learn Spring",
                 "Build a CRUD API",
                 TaskStatus.TODO,
+                DUE_DATE,
                 Category.EDUCATION,
                 1L
         );
@@ -107,17 +111,11 @@ class ServiceCacheTests {
                 .when(userRepository).save(any(User.class));
 
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
-        when(taskRepository.findAll(any(Pageable.class)))
-                .thenReturn(new PageImpl<>(
-                        List.of(task),
-                        taskPageable,
-                        1
-                ));
-
-        when(taskRepository.findAllByStatus(
-                eq(TaskStatus.TODO),
+        when(taskRepository.findAll(
+                org.mockito.ArgumentMatchers.<Specification<Task>>any(),
                 any(Pageable.class)
-        )).thenReturn(new PageImpl<>(
+        ))
+                .thenReturn(new PageImpl<>(
                 List.of(task),
                 taskPageable,
                 1
@@ -133,30 +131,48 @@ class ServiceCacheTests {
         assertThat(userService.findById(1L)).isEqualTo(userResponse);
         assertThat(userService.findById(1L)).isEqualTo(userResponse);
 
-        assertThat(taskService.findAll(taskPageable))
+        assertThat(taskService.findAll(null, null, taskPageable))
                 .isEqualTo(taskPageResponse);
-        assertThat(taskService.findAll(taskPageable))
+        assertThat(taskService.findAll(null, null, taskPageable))
                 .isEqualTo(taskPageResponse);
         assertThat(taskService.findById(1L)).isEqualTo(taskResponse);
         assertThat(taskService.findById(1L)).isEqualTo(taskResponse);
 
         verify(userRepository, times(1)).findAll();
         verify(userRepository, times(1)).findById(1L);
-        verify(taskRepository, times(1)).findAll(any(Pageable.class));
+        verify(taskRepository, times(1))
+                .findAll(
+                        org.mockito.ArgumentMatchers.<Specification<Task>>any(),
+                        any(Pageable.class)
+                );
         verify(taskRepository, times(1)).findById(1L);
     }
 
     @Test
-    void cachesTaskListsByStatus() {
-        assertThat(taskService.findAllByStatus(TaskStatus.TODO, taskPageable))
+    void cachesTaskListsByFilterCombination() {
+        assertThat(taskService.findAll(TaskStatus.TODO, DUE_DATE, taskPageable))
                 .isEqualTo(taskPageResponse);
-        assertThat(taskService.findAllByStatus(TaskStatus.TODO, taskPageable))
+        assertThat(taskService.findAll(TaskStatus.TODO, DUE_DATE, taskPageable))
                 .isEqualTo(taskPageResponse);
 
-        verify(taskRepository, times(1)).findAllByStatus(
-                eq(TaskStatus.TODO),
-                any(Pageable.class)
-        );
+        verify(taskRepository, times(1))
+                .findAll(
+                        org.mockito.ArgumentMatchers.<Specification<Task>>any(),
+                        any(Pageable.class)
+                );
+    }
+
+    @Test
+    void cachesDifferentTaskFilterCombinationsIndependently() {
+        taskService.findAll(TaskStatus.TODO, DUE_DATE, taskPageable);
+        taskService.findAll(TaskStatus.DONE, DUE_DATE, taskPageable);
+        taskService.findAll(TaskStatus.TODO, DUE_DATE.plusDays(1), taskPageable);
+
+        verify(taskRepository, times(3))
+                .findAll(
+                        org.mockito.ArgumentMatchers.<Specification<Task>>any(),
+                        any(Pageable.class)
+                );
     }
 
     @Test
@@ -172,9 +188,12 @@ class ServiceCacheTests {
                 Sort.by(Sort.Order.desc("title"))
         );
 
-        when(taskRepository.findAll(any(Pageable.class)))
+        when(taskRepository.findAll(
+                org.mockito.ArgumentMatchers.<Specification<Task>>any(),
+                any(Pageable.class)
+        ))
                 .thenAnswer(invocation -> {
-                    var pageable = invocation.getArgument(0, Pageable.class);
+                    var pageable = invocation.getArgument(1, Pageable.class);
                     return new PageImpl<>(
                             List.of(task),
                             pageable,
@@ -182,17 +201,20 @@ class ServiceCacheTests {
                     );
                 });
 
-        taskService.findAll(taskPageable);
-        taskService.findAll(taskPageable);
+        taskService.findAll(null, null, taskPageable);
+        taskService.findAll(null, null, taskPageable);
 
-        taskService.findAll(secondPage);
-        taskService.findAll(secondPage);
+        taskService.findAll(null, null, secondPage);
+        taskService.findAll(null, null, secondPage);
 
-        taskService.findAll(titleSortedPage);
-        taskService.findAll(titleSortedPage);
+        taskService.findAll(null, null, titleSortedPage);
+        taskService.findAll(null, null, titleSortedPage);
 
         verify(taskRepository, times(3))
-                .findAll(any(Pageable.class));
+                .findAll(
+                        org.mockito.ArgumentMatchers.<Specification<Task>>any(),
+                        any(Pageable.class)
+                );
     }
 
     @Test
@@ -204,6 +226,7 @@ class ServiceCacheTests {
         taskService.create(new CreateTaskRequest(
                 "Learn Spring",
                 "Build a CRUD API",
+                DUE_DATE,
                 Category.EDUCATION,
                 1L
         ));
@@ -221,6 +244,7 @@ class ServiceCacheTests {
                 "Updated task",
                 "Updated description",
                 TaskStatus.IN_PROGRESS,
+                DUE_DATE,
                 Category.EDUCATION
         ));
 

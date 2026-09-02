@@ -2,6 +2,7 @@ package org.nakrut.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.nakrut.model.Category;
@@ -9,6 +10,8 @@ import org.nakrut.model.TaskStatus;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 
 class CacheSerializationTests {
+
+    private static final LocalDate DUE_DATE = LocalDate.now().plusDays(7);
 
     private final JdkSerializationRedisSerializer serializer = new JdkSerializationRedisSerializer();
 
@@ -27,6 +30,7 @@ class CacheSerializationTests {
                 "Learn Spring",
                 "Build a CRUD API",
                 TaskStatus.TODO,
+                DUE_DATE,
                 Category.EDUCATION,
                 1L
         );
@@ -42,6 +46,7 @@ class CacheSerializationTests {
                 "Learn Spring",
                 "Build a CRUD API",
                 TaskStatus.TODO,
+                DUE_DATE,
                 Category.EDUCATION,
                 1L
         );

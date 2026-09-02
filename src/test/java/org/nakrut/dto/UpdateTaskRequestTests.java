@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.nakrut.model.Category;
 import org.nakrut.model.TaskStatus;
 
 class UpdateTaskRequestTests {
+
+    private static final LocalDate DUE_DATE = LocalDate.of(2026, 9, 10);
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
@@ -18,6 +21,7 @@ class UpdateTaskRequestTests {
                 "Learn Spring Boot",
                 "Build a CRUD API",
                 null,
+                DUE_DATE,
                 Category.EDUCATION
         );
 
@@ -31,6 +35,7 @@ class UpdateTaskRequestTests {
                 "a".repeat(256),
                 "Build a CRUD API",
                 TaskStatus.IN_PROGRESS,
+                DUE_DATE,
                 Category.EDUCATION
         );
 
@@ -39,11 +44,26 @@ class UpdateTaskRequestTests {
     }
 
     @Test
+    void rejectsMissingDueDate() {
+        UpdateTaskRequest request = new UpdateTaskRequest(
+                "Learn Spring Boot",
+                "Build a CRUD API",
+                TaskStatus.IN_PROGRESS,
+                null,
+                Category.EDUCATION
+        );
+
+        assertThat(validator.validate(request))
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("dueDate"));
+    }
+
+    @Test
     void acceptsValidRequest() {
         UpdateTaskRequest request = new UpdateTaskRequest(
                 "Learn Spring Boot",
                 "Build a CRUD API",
                 TaskStatus.IN_PROGRESS,
+                DUE_DATE,
                 Category.EDUCATION
         );
 

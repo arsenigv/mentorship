@@ -1,9 +1,11 @@
 package org.nakrut.service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.nakrut.config.CacheNames;
@@ -25,6 +27,7 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,25 +48,31 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.TASKS)
-    public PageResponse<TaskResponse> findAll(Pageable pageable) {
+    public PageResponse<TaskResponse> findAll(
+            TaskStatus status,
+            LocalDate dueDate,
+        Pageable pageable
+    ) {
         var normalizedPageable = normalizePageable(pageable);
-        var tasks = taskRepository.findAll(normalizedPageable)
+        var tasks = taskRepository.findAll(taskFilters(status, dueDate), normalizedPageable)
                 .map(taskMapper::toResponse);
 
         return PageResponse.from(tasks);
     }
 
-    @Transactional(readOnly = true)
-    @Cacheable(cacheNames = CacheNames.TASKS)
-    public PageResponse<TaskResponse> findAllByStatus(
-            TaskStatus status,
-            Pageable pageable
-    ) {
-        var normalizedPageable = normalizePageable(pageable);
-        var tasks = taskRepository.findAllByStatus(status, normalizedPageable)
-                .map(taskMapper::toResponse);
+    private Specification<Task> taskFilters(TaskStatus status, LocalDate dueDate) {
+        return (root, query, criteriaBuilder) -> {
+            var predicates = new ArrayList<Predicate>();
 
-        return PageResponse.from(tasks);
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+            if (dueDate != null) {
+                predicates.add(criteriaBuilder.equal(root.get("dueDate"), dueDate));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     @Transactional(readOnly = true)

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.PageResponse;
@@ -17,6 +18,7 @@ import org.nakrut.service.TaskService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,7 +45,8 @@ public class TaskController {
     @GetMapping
     @Operation(
             summary = "List tasks",
-            description = "Returns a page of tasks. Supported sort fields: id, title, status. "
+            description = "Returns a page of tasks, optionally filtered by status and exact due date. "
+                    + "Supported sort fields: id, title, status. "
                     + "Status uses workflow order TODO, IN_PROGRESS, DONE. Repeat sort to combine fields."
     )
     @ApiResponses({
@@ -57,6 +61,9 @@ public class TaskController {
             )
     })
     public PageResponse<TaskResponse> findAll(
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dueDate,
             @ParameterObject
             @PageableDefault(
                     size = 20,
@@ -64,36 +71,7 @@ public class TaskController {
                     direction = Sort.Direction.ASC
             )Pageable pageable
     ) {
-        return taskService.findAll(pageable);
-    }
-
-    @GetMapping("/status/{status}")
-    @Operation(
-            summary = "List tasks by status",
-            description = "Returns a page of tasks with the requested status. "
-                    + "Supported sort fields: id, title, status."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Page returned"),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid status, paging, or sorting parameter",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                            schema = @Schema(implementation = ProblemDetail.class)
-                    )
-            )
-    })
-    public PageResponse<TaskResponse> findAllByStatus(
-            @PathVariable TaskStatus status,
-            @ParameterObject
-            @PageableDefault(
-                    size = 20,
-                    sort = "id",
-                    direction = Sort.Direction.ASC
-            ) Pageable pageable
-            ) {
-        return taskService.findAllByStatus(status, pageable);
+        return taskService.findAll(status, dueDate, pageable);
     }
 
     @GetMapping("/{id}")

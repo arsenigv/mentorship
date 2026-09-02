@@ -3,10 +3,10 @@ package org.nakrut.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -30,9 +30,12 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTests {
+
+    private static final LocalDate DUE_DATE = LocalDate.of(2026, 9, 10);
 
     @Mock
     private TaskRepository taskRepository;
@@ -52,6 +55,7 @@ class TaskServiceTests {
         var task = new Task(
                 "Learn Spring",
                 "Build a CRUD API",
+                DUE_DATE,
                 Category.EDUCATION,
                 user
         );
@@ -61,16 +65,17 @@ class TaskServiceTests {
         var requestedPageable = PageRequest.of(1, 5, Sort.by(Sort.Order.desc("status")));
         var repositoryPage = new PageImpl<>(List.of(task), PageRequest.of(1,5), 6);
 
-        when(taskRepository.findAllByStatus(
-                eq(TaskStatus.DONE),
+        when(taskRepository.findAll(
+                org.mockito.ArgumentMatchers.<Specification<Task>>any(),
                 any(Pageable.class)
-        )).thenReturn(repositoryPage);
+        ))
+                .thenReturn(repositoryPage);
 
-        var response = taskService.findAllByStatus(TaskStatus.DONE, requestedPageable);
+        var response = taskService.findAll(TaskStatus.DONE, DUE_DATE, requestedPageable);
 
         var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(taskRepository).findAllByStatus(
-                eq(TaskStatus.DONE),
+        verify(taskRepository).findAll(
+                org.mockito.ArgumentMatchers.<Specification<Task>>any(),
                 pageableCaptor.capture()
         );
 
@@ -99,6 +104,7 @@ class TaskServiceTests {
         CreateTaskRequest request = new CreateTaskRequest(
                 "Learn Spring",
                 "Build a CRUD API",
+                DUE_DATE,
                 Category.EDUCATION,
                 1L
         );
@@ -109,6 +115,7 @@ class TaskServiceTests {
         TaskResponse response = taskService.create(request);
 
         assertThat(response.status()).isEqualTo(TaskStatus.TODO);
+        assertThat(response.dueDate()).isEqualTo(DUE_DATE);
     }
 
     @Test
@@ -119,7 +126,7 @@ class TaskServiceTests {
                 Sort.by("description")
         );
 
-        assertThatThrownBy(() -> taskService.findAll(pageable))
+        assertThatThrownBy(() -> taskService.findAll(null, null, pageable))
                 .isInstanceOf(InvalidSortFieldException.class)
                 .hasMessage("Unsupported task sort field: description");
     }

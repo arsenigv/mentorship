@@ -74,8 +74,7 @@ Main resources:
 | --- | --- | --- |
 | `GET`, `POST` | `/api/users` | List or create users |
 | `GET`, `PUT`, `DELETE` | `/api/users/{id}` | Read, update, or delete a user |
-| `GET`, `POST` | `/api/tasks` | Page tasks or create a task |
-| `GET` | `/api/tasks/status/{status}` | Page tasks filtered by status |
+| `GET`, `POST` | `/api/tasks` | Filter/page tasks or create a task |
 | `GET`, `PUT`, `DELETE` | `/api/tasks/{id}` | Read, update, or delete a task |
 
 Expected failures use RFC Problem Detail responses. Validation and malformed
@@ -84,7 +83,10 @@ unexpected failures return a sanitized `500` response.
 
 ## Task paging and sorting
 
-Both task collection endpoints accept these query parameters:
+The task collection endpoint accepts these query parameters:
+
+- `status`: optional exact status filter (`TODO`, `IN_PROGRESS`, or `DONE`)
+- `dueDate`: optional exact due-date filter in `YYYY-MM-DD` format
 
 - `page`: zero-based page number; default `0`
 - `size`: requested page size; default `20`, maximum `100`
@@ -97,8 +99,12 @@ An ID ascending tie-breaker is added when `id` is not explicitly requested.
 Example:
 
 ```powershell
-curl.exe "http://localhost:8080/api/tasks?page=0&size=10&sort=status,asc&sort=title,asc"
+curl.exe "http://localhost:8080/api/tasks?status=TODO&dueDate=2026-09-10&page=0&size=10&sort=status,asc&sort=title,asc"
 ```
+
+The filters are independent and use AND semantics when supplied together.
+Task create and update requests require a calendar-only `dueDate`; past,
+current, and future dates are accepted.
 
 Task collection responses contain `content`, `page`, `size`, `totalElements`,
 `totalPages`, `first`, and `last`.
@@ -112,9 +118,9 @@ Liquibase is the schema authority. Ordered change sets are included from
 The schema contains:
 
 - `app_users`, with a unique non-null username
-- `tasks`, with a required owner, title, status, and category
+- `tasks`, with a required owner, title, status, due date, and category
 - database checks for valid status and category values
-- indexes for task status and owner lookups
+- indexes for task status, due-date, and owner lookups
 
 Development seed data runs only with the `dev` profile. The `prod` profile reads
 database configuration from `SPRING_DATASOURCE_URL`,

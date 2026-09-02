@@ -1,5 +1,7 @@
 package org.nakrut.model;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -40,6 +42,11 @@ public class Task {
     @Column(nullable = false)
     @Setter
     private TaskStatus status = TaskStatus.TODO;
+
+    @Column(nullable = false)
+    @Setter
+    private LocalDate dueDate;
+
     @Formula("""
             CASE status
                 WHEN 'TODO' THEN 0
@@ -59,9 +66,10 @@ public class Task {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    public Task(String title, String description, Category category, User user) {
+    public Task(String title, String description, LocalDate dueDate, Category category, User user) {
         this.title = title;
         this.description = description;
+        this.dueDate = dueDate;
         this.category = category;
         this.user = user;
     }

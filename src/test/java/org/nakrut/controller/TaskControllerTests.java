@@ -3,6 +3,7 @@ package org.nakrut.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 @ExtendWith(MockitoExtension.class)
 class TaskControllerTests {
 
+    private static final LocalDate DUE_DATE = LocalDate.of(2026, 9, 10);
+
     @Mock
     private TaskService taskService;
 
@@ -56,7 +60,7 @@ class TaskControllerTests {
 
     @Test
     void returnsAllTasks() throws Exception {
-        when(taskService.findAll(any(Pageable.class)))
+        when(taskService.findAll(isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(pageResponse((TaskStatus.TODO)));
 
         mockMvc.perform(get("/api/tasks"))
@@ -69,34 +73,76 @@ class TaskControllerTests {
     }
 
     @Test
-    void returnsAllTasksWithRequestedStatus() throws Exception {
-        when(taskService.findAllByStatus(
+    void returnsTasksWithRequestedStatus() throws Exception {
+        when(taskService.findAll(
                 eq(TaskStatus.IN_PROGRESS),
+                isNull(),
                 any(Pageable.class)
         )).thenReturn(pageResponse(TaskStatus.IN_PROGRESS));
 
-        mockMvc.perform(get("/api/tasks/status/IN_PROGRESS"))
+        mockMvc.perform(get("/api/tasks").param("status", "IN_PROGRESS"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1))
                 .andExpect(jsonPath("$.content[0].status").value("IN_PROGRESS"));
 
-        verify(taskService).findAllByStatus(
+        verify(taskService).findAll(
                 eq(TaskStatus.IN_PROGRESS),
+                isNull(),
+                any(Pageable.class)
+        );
+    }
+
+    @Test
+    void returnsTasksWithRequestedDueDate() throws Exception {
+        when(taskService.findAll(isNull(), eq(DUE_DATE), any(Pageable.class)))
+                .thenReturn(pageResponse(TaskStatus.TODO));
+
+        mockMvc.perform(get("/api/tasks").param("dueDate", "2026-09-10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].dueDate").value("2026-09-10"));
+
+        verify(taskService).findAll(isNull(), eq(DUE_DATE), any(Pageable.class));
+    }
+
+    @Test
+    void combinesStatusAndDueDateFilters() throws Exception {
+        when(taskService.findAll(
+                eq(TaskStatus.IN_PROGRESS),
+                eq(DUE_DATE),
+                any(Pageable.class)
+        )).thenReturn(pageResponse(TaskStatus.IN_PROGRESS));
+
+        mockMvc.perform(get("/api/tasks")
+                        .param("status", "IN_PROGRESS")
+                        .param("dueDate", "2026-09-10"))
+                .andExpect(status().isOk());
+
+        verify(taskService).findAll(
+                eq(TaskStatus.IN_PROGRESS),
+                eq(DUE_DATE),
                 any(Pageable.class)
         );
     }
 
     @Test
     void rejectsInvalidTaskStatus() throws Exception {
-        mockMvc.perform(get("/api/tasks/status/INVALID"))
+        mockMvc.perform(get("/api/tasks").param("status", "INVALID"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Invalid Parameter"))
                 .andExpect(jsonPath("$.detail").value("Parameter 'status' has an invalid value"));
     }
 
     @Test
+    void rejectsMalformedDueDate() throws Exception {
+        mockMvc.perform(get("/api/tasks").param("dueDate", "10-09-2026"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Invalid Parameter"))
+                .andExpect(jsonPath("$.detail").value("Parameter 'dueDate' has an invalid value"));
+    }
+
+    @Test
     void rejectsUnsupportedTaskSortField() throws Exception {
-        when(taskService.findAll(any(Pageable.class)))
+        when(taskService.findAll(isNull(), isNull(), any(Pageable.class)))
                 .thenThrow(new InvalidSortFieldException("description"));
         mockMvc.perform(get("/api/tasks")
                 .param("sort", "description, asc"))
@@ -126,6 +172,7 @@ class TaskControllerTests {
                                 {
                                   "title":"Learn Spring",
                                   "description":"Build a CRUD API",
+                                  "dueDate":"2026-09-10",
                                   "category":"EDUCATION",
                                   "userId":1
                                 }
@@ -147,6 +194,7 @@ class TaskControllerTests {
                                   "title":"Learn Spring",
                                   "description":"CRUD API completed",
                                   "status":"IN_PROGRESS",
+                                  "dueDate":"2026-09-10",
                                   "category":"EDUCATION"
                                 }
                                 """))
@@ -165,7 +213,7 @@ class TaskControllerTests {
 
     @Test
     void forwardsPagingAndSortingWithCappedPageSize() throws Exception {
-        when(taskService.findAll(any(Pageable.class)))
+        when(taskService.findAll(isNull(), isNull(), any(Pageable.class)))
                 .thenReturn(pageResponse(TaskStatus.TODO));
 
         mockMvc.perform(get("/api/tasks")
@@ -176,7 +224,7 @@ class TaskControllerTests {
                 .andExpect(status().isOk());
 
         var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(taskService).findAll(pageableCaptor.capture());
+        verify(taskService).findAll(isNull(), isNull(), pageableCaptor.capture());
 
         var pageable = pageableCaptor.getValue();
         var orders = pageable.getSort().toList();
@@ -197,6 +245,7 @@ class TaskControllerTests {
                 "Learn Spring",
                 "Build a CRUD API",
                 status,
+                DUE_DATE,
                 Category.EDUCATION,
                 1L
         );

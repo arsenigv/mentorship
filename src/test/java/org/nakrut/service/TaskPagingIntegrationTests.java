@@ -24,7 +24,7 @@ public class TaskPagingIntegrationTests {
                 Sort.by(Sort.Order.asc("status"))
         );
 
-        var response = taskService.findAll(pageable);
+        var response = taskService.findAll(null, null, pageable);
 
         var statusRanks = response.content().stream()
                 .map(task -> switch (task.status()) {
@@ -37,6 +37,24 @@ public class TaskPagingIntegrationTests {
         assertThat(statusRanks)
                 .isNotEmpty()
                 .isSorted();
+    }
+
+    @Test
+    void filtersTasksByStatusAndDueDate() {
+        var pageable = PageRequest.of(0, 100, Sort.by(Sort.Order.asc("id")));
+        var sample = taskService.findAll(null, null, pageable).content().getFirst();
+
+        var response = taskService.findAll(sample.status(), sample.dueDate(), pageable);
+
+        assertThat(response.content())
+                .isNotEmpty()
+                .allSatisfy(task -> {
+                    assertThat(task.status()).isEqualTo(sample.status());
+                    assertThat(task.dueDate()).isEqualTo(sample.dueDate());
+                });
+        assertThat(response.content())
+                .extracting(task -> task.id())
+                .contains(sample.id());
     }
 
 }

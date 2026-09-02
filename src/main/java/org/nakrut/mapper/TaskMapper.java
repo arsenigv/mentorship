@@ -14,6 +14,7 @@ public class TaskMapper {
         return new Task(
                 request.title(),
                 request.description(),
+                request.dueDate(),
                 request.category(),
                 user
         );
@@ -23,6 +24,7 @@ public class TaskMapper {
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setStatus(request.status());
+        task.setDueDate(request.dueDate());
         task.setCategory(request.category());
     }
 
@@ -32,6 +34,7 @@ public class TaskMapper {
                 task.getTitle(),
                 task.getDescription(),
                 task.getStatus(),
+                task.getDueDate(),
                 task.getCategory(),
                 task.getUser().getId()
         );
