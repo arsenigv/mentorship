@@ -16,6 +16,7 @@ import org.nakrut.dto.UpdateTaskRequest;
 import org.nakrut.exception.InvalidSortFieldException;
 import org.nakrut.exception.ResourceNotFoundException;
 import org.nakrut.mapper.TaskMapper;
+import org.nakrut.metrics.ApplicationMetrics;
 import org.nakrut.model.Task;
 import org.nakrut.model.TaskStatus;
 import org.nakrut.model.User;
@@ -45,6 +46,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final TaskMapper taskMapper;
+    private final ApplicationMetrics applicationMetrics;
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.TASKS)
@@ -87,6 +89,13 @@ public class TaskService {
         User user = findUser(request.userId());
         Task task = taskMapper.toEntity(request, user);
         Task savedTask = taskRepository.save(task);
+
+        applicationMetrics.recordSuccessfulOperation(
+                ApplicationMetrics.Resource.TASK,
+                ApplicationMetrics.Operation.CREATE
+        );
+        applicationMetrics.recordTaskStatusAssignment(savedTask.getStatus());
+
         log.info("Task created: id={}, userId={}", savedTask.getId(), request.userId());
         return taskMapper.toResponse(savedTask);
     }
@@ -100,6 +109,13 @@ public class TaskService {
         Task task = findTask(id);
         taskMapper.updateEntity(request, task);
         Task savedTask = taskRepository.save(task);
+
+        applicationMetrics.recordSuccessfulOperation(
+                ApplicationMetrics.Resource.TASK,
+                ApplicationMetrics.Operation.UPDATE
+        );
+        applicationMetrics.recordTaskStatusAssignment(savedTask.getStatus());
+
         log.info("Task updated: id={}, status={}", savedTask.getId(), savedTask.getStatus());
         return taskMapper.toResponse(savedTask);
     }
@@ -112,6 +128,12 @@ public class TaskService {
     public void delete(Long id) {
         Task task = findTask(id);
         taskRepository.delete(task);
+
+        applicationMetrics.recordSuccessfulOperation(
+                ApplicationMetrics.Resource.TASK,
+                ApplicationMetrics.Operation.DELETE
+        );
+
         log.info("Task deleted: id={}", id);
     }
 

@@ -11,6 +11,7 @@ import org.nakrut.exception.DuplicateUsernameException;
 import org.nakrut.exception.ResourceNotFoundException;
 import org.nakrut.exception.UserHasAssignedTasksException;
 import org.nakrut.mapper.UserMapper;
+import org.nakrut.metrics.ApplicationMetrics;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
@@ -28,6 +29,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final TaskRepository taskRepository;
     private final UserMapper userMapper;
+    private final ApplicationMetrics applicationMetrics;
 
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CacheNames.USERS)
@@ -53,6 +55,12 @@ public class UserService {
         }
 
         User savedUser = userRepository.save(userMapper.toEntity(request));
+
+        applicationMetrics.recordSuccessfulOperation(
+                ApplicationMetrics.Resource.USER,
+                ApplicationMetrics.Operation.CREATE
+        );
+
         log.info("User created: id={}", savedUser.getId());
         return userMapper.toResponse(savedUser);
     }
@@ -72,6 +80,12 @@ public class UserService {
 
         userMapper.updateEntity(request, user);
         User savedUser = userRepository.save(user);
+
+        applicationMetrics.recordSuccessfulOperation(
+                ApplicationMetrics.Resource.USER,
+                ApplicationMetrics.Operation.UPDATE
+        );
+
         log.info("User updated: id={}", savedUser.getId());
         return userMapper.toResponse(savedUser);
     }
@@ -89,6 +103,12 @@ public class UserService {
         }
 
         userRepository.delete(user);
+
+        applicationMetrics.recordSuccessfulOperation(
+                ApplicationMetrics.Resource.USER,
+                ApplicationMetrics.Operation.DELETE
+        );
+
         log.info("User deleted: id={}", id);
     }
 

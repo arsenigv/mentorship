@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.nakrut.dto.*;
 import org.nakrut.mapper.TaskMapper;
 import org.nakrut.mapper.UserMapper;
+import org.nakrut.metrics.ApplicationMetrics;
 import org.nakrut.model.Category;
 import org.nakrut.model.Task;
 import org.nakrut.model.TaskStatus;
@@ -309,21 +310,28 @@ class ServiceCacheTests {
         }
 
         @Bean
+        ApplicationMetrics applicationMetrics() {
+            return mock(ApplicationMetrics.class);
+        }
+
+        @Bean
         UserService userService(
                 UserRepository userRepository,
                 TaskRepository taskRepository,
-                UserMapper userMapper
+                UserMapper userMapper,
+                ApplicationMetrics applicationMetrics
         ) {
-            return new UserService(userRepository, taskRepository, userMapper);
+            return new UserService(userRepository, taskRepository, userMapper, applicationMetrics);
         }
 
         @Bean
         TaskService taskService(
                 TaskRepository taskRepository,
                 UserRepository userRepository,
-                TaskMapper taskMapper
+                TaskMapper taskMapper,
+                ApplicationMetrics applicationMetrics
         ) {
-            return new TaskService(taskRepository, userRepository, taskMapper);
+            return new TaskService(taskRepository, userRepository, taskMapper, applicationMetrics);
         }
     }
 }

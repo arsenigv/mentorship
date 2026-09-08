@@ -17,6 +17,7 @@ import org.nakrut.dto.UserResponse;
 import org.nakrut.exception.DuplicateUsernameException;
 import org.nakrut.exception.UserHasAssignedTasksException;
 import org.nakrut.mapper.UserMapper;
+import org.nakrut.metrics.ApplicationMetrics;
 import org.nakrut.model.User;
 import org.nakrut.repository.TaskRepository;
 import org.nakrut.repository.UserRepository;
@@ -29,6 +30,9 @@ class UserServiceTests {
 
     @Mock
     private TaskRepository taskRepository;
+
+    @Mock
+    private ApplicationMetrics applicationMetrics;
 
     @Spy
     private UserMapper userMapper = new UserMapper();

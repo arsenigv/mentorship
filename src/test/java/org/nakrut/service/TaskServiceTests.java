@@ -20,6 +20,7 @@ import org.nakrut.dto.CreateTaskRequest;
 import org.nakrut.dto.TaskResponse;
 import org.nakrut.exception.InvalidSortFieldException;
 import org.nakrut.mapper.TaskMapper;
+import org.nakrut.metrics.ApplicationMetrics;
 import org.nakrut.model.Category;
 import org.nakrut.model.Task;
 import org.nakrut.model.TaskStatus;
@@ -42,6 +43,9 @@ class TaskServiceTests {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private ApplicationMetrics applicationMetrics;
 
     @Spy
     private TaskMapper taskMapper = new TaskMapper();

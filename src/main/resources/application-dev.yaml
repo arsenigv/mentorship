@@ -7,3 +7,18 @@ spring:
     init:
       mode: always
       data-locations: classpath:db/dev-data.sql
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - metrics
+          - prometheus
+  metrics:
+    tags:
+      application: mentorship
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
