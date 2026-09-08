@@ -96,7 +96,14 @@ public class TaskService {
         );
         applicationMetrics.recordTaskStatusAssignment(savedTask.getStatus());
 
-        log.info("Task created: id={}, userId={}", savedTask.getId(), request.userId());
+        log.atInfo()
+                .addKeyValue("event.action", "task_create")
+                .addKeyValue("event.outcome", "success")
+                .addKeyValue("mentorship.resource", "task")
+                .addKeyValue("mentorship.entity_id", savedTask.getId())
+                .addKeyValue("mentorship.owner_id", request.userId())
+                .addKeyValue("mentorship.task_status", savedTask.getStatus())
+                .log("Task created");
         return taskMapper.toResponse(savedTask);
     }
 
@@ -116,7 +123,13 @@ public class TaskService {
         );
         applicationMetrics.recordTaskStatusAssignment(savedTask.getStatus());
 
-        log.info("Task updated: id={}, status={}", savedTask.getId(), savedTask.getStatus());
+        log.atInfo()
+                .addKeyValue("event.action", "task_update")
+                .addKeyValue("event.outcome", "success")
+                .addKeyValue("mentorship.resource", "task")
+                .addKeyValue("mentorship.entity_id", savedTask.getId())
+                .addKeyValue("mentorship.task_status", savedTask.getStatus())
+                .log("Task updated");
         return taskMapper.toResponse(savedTask);
     }
 
@@ -134,13 +147,23 @@ public class TaskService {
                 ApplicationMetrics.Operation.DELETE
         );
 
-        log.info("Task deleted: id={}", id);
+        log.atInfo()
+                .addKeyValue("event.action", "task_delete")
+                .addKeyValue("event.outcome", "success")
+                .addKeyValue("mentorship.resource", "task")
+                .addKeyValue("mentorship.entity_id", id)
+                .log("Task deleted");
     }
 
     private Task findTask(Long id) {
         return taskRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.warn("Task not found: id={}", id);
+                    log.atWarn()
+                            .addKeyValue("event.action", "task_lookup")
+                            .addKeyValue("event.outcome", "failure")
+                            .addKeyValue("mentorship.resource", "task")
+                            .addKeyValue("mentorship.entity_id", id)
+                            .log("Task not found");
                     return new ResourceNotFoundException("Task not found: " + id);
                 });
     }
@@ -148,7 +171,12 @@ public class TaskService {
     private User findUser(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.warn("Task owner not found: userId={}", id);
+                    log.atWarn()
+                            .addKeyValue("event.action", "task_owner_lookup")
+                            .addKeyValue("event.outcome", "failure")
+                            .addKeyValue("mentorship.resource", "task")
+                            .addKeyValue("mentorship.owner_id", id)
+                            .log("Task owner not found");
                     return new ResourceNotFoundException("User not found: " + id);
                 });
     }

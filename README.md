@@ -46,7 +46,8 @@ The API is available at `http://localhost:8080`.
 ## Observability
 
 The development environment includes Actuator and Micrometer metrics,
-Prometheus storage, and a provisioned Grafana dashboard.
+Prometheus storage, a provisioned Grafana dashboard, and an optional ELK stack
+for centralized application logs.
 
 ```powershell
 docker compose up -d
@@ -57,6 +58,19 @@ Open Prometheus at <http://localhost:9090> and Grafana at
 <http://localhost:3000>. The local Grafana credentials are `admin` / `admin`.
 See [docs/observability.md](docs/observability.md) for the architecture,
 metrics, PromQL queries, exercises, verification steps, and troubleshooting.
+
+To run Elasticsearch, Logstash, and Kibana as well, enable the `elk` Compose
+and Spring profiles:
+
+```powershell
+docker compose --profile elk up -d
+mvn spring-boot:run "-Dspring-boot.run.profiles=dev,elk"
+```
+
+Open Kibana at <http://localhost:5601>. See
+[docs/logging.md](docs/logging.md) for the complete logging architecture,
+startup procedure, Kibana Discover walkthrough, verification exercises,
+troubleshooting, security warning, and cleanup commands.
 
 ## Debugging with the dev profile
 

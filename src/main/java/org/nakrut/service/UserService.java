@@ -50,7 +50,11 @@ public class UserService {
     public UserResponse create(CreateUserRequest request) {
         String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsername(username)) {
-            log.warn("User creation rejected: username already exists");
+            log.atWarn()
+                    .addKeyValue("event.action", "user_create")
+                    .addKeyValue("event.outcome", "failure")
+                    .addKeyValue("mentorship.resource", "user")
+                    .log("Duplicate user creation");
             throw new DuplicateUsernameException(username);
         }
 
@@ -61,7 +65,12 @@ public class UserService {
                 ApplicationMetrics.Operation.CREATE
         );
 
-        log.info("User created: id={}", savedUser.getId());
+        log.atInfo()
+                .addKeyValue("event.action", "user_create")
+                .addKeyValue("event.outcome", "success")
+                .addKeyValue("mentorship.resource", "user")
+                .addKeyValue("mentorship.entity_id", savedUser.getId())
+                .log("User created");
         return userMapper.toResponse(savedUser);
     }
 
@@ -74,7 +83,12 @@ public class UserService {
         var user = findUser(id);
         String username = userMapper.normalizedUsername(request);
         if (userRepository.existsByUsernameAndIdNot(username, id)) {
-            log.warn("User update rejected: id={}, username already exists", id);
+            log.atWarn()
+                    .addKeyValue("event.action", "user_update")
+                    .addKeyValue("event.outcome", "failure")
+                    .addKeyValue("mentorship.resource", "user")
+                    .addKeyValue("mentorship.entity_id", id)
+                    .log("Duplicate user update");
             throw new DuplicateUsernameException(username);
         }
 
@@ -86,7 +100,12 @@ public class UserService {
                 ApplicationMetrics.Operation.UPDATE
         );
 
-        log.info("User updated: id={}", savedUser.getId());
+        log.atInfo()
+                .addKeyValue("event.action", "user_update")
+                .addKeyValue("event.outcome", "success")
+                .addKeyValue("mentorship.resource", "user")
+                .addKeyValue("mentorship.entity_id", savedUser.getId())
+                .log("User updated");
         return userMapper.toResponse(savedUser);
     }
 
@@ -98,7 +117,12 @@ public class UserService {
     public void delete(Long id) {
         var user = findUser(id);
         if (taskRepository.existsByUserId(id)) {
-            log.warn("User deletion rejected: id={}, assigned tasks exist", id);
+            log.atWarn()
+                    .addKeyValue("event.action", "user_delete")
+                    .addKeyValue("event.outcome", "failure")
+                    .addKeyValue("mentorship.resource", "user")
+                    .addKeyValue("mentorship.entity_id", id)
+                    .log("User deletion rejected");
             throw new UserHasAssignedTasksException(id);
         }
 
@@ -109,13 +133,23 @@ public class UserService {
                 ApplicationMetrics.Operation.DELETE
         );
 
-        log.info("User deleted: id={}", id);
+        log.atInfo()
+                .addKeyValue("event.action", "user_delete")
+                .addKeyValue("event.outcome", "success")
+                .addKeyValue("mentorship.resource", "user")
+                .addKeyValue("mentorship.entity_id", id)
+                .log("User deleted");
     }
 
     private User findUser(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.warn("User not found: id={}", id);
+                    log.atWarn()
+                            .addKeyValue("event.action", "user_lookup")
+                            .addKeyValue("event.outcome", "failure")
+                            .addKeyValue("mentorship.resource", "user")
+                            .addKeyValue("mentorship.entity_id", id)
+                            .log("User not found");
                     return new ResourceNotFoundException("User not found: " + id);
                 });
     }

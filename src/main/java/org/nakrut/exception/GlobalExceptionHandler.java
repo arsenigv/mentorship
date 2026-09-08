@@ -54,7 +54,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             DataIntegrityViolationException exception,
             WebRequest request
     ) {
-        log.warn("Database constraint violation while processing request", exception);
+        log.atWarn()
+                .addKeyValue("event.action", "request_processing")
+                .addKeyValue("event.outcome", "failure")
+                .addKeyValue("error.type", exception.getClass().getSimpleName())
+                .setCause(exception)
+                .log("Database constraint violation while processing request");
         return problem(
                 HttpStatus.CONFLICT,
                 "Data Integrity Conflict",
@@ -68,7 +73,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             Exception exception,
             WebRequest request
     ) {
-        log.error("unexpected error while processing request", exception);
+        log.atError()
+                .addKeyValue("event.action", "request_processing")
+                .addKeyValue("event.outcome", "failure")
+                .addKeyValue("error.type", exception.getClass().getSimpleName())
+                .setCause(exception)
+                .log("Unexpected error while processing request");
         return problem(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
