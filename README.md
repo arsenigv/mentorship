@@ -9,7 +9,7 @@ Springdoc OpenAPI documentation.
 - Java 21
 - Maven 3.9+
 - PostgreSQL on `localhost:5432`
-- Redis on `localhost:6379` when caching is enabled
+- Docker Desktop (Redis, Prometheus, and Grafana)
 
 The repository has no Maven wrapper, so all commands use an installed `mvn`.
 
@@ -24,10 +24,10 @@ CREATE DATABASE mentorship_dev;
 The default development credentials are `postgres` / `postgres`. They are local
 defaults only and can be changed in `application-dev.yaml`.
 
-Start Redis and run the application:
+Start the supporting services and run the application:
 
 ```powershell
-docker compose up -d redis
+docker compose up -d
 mvn spring-boot:run
 ```
 
@@ -42,6 +42,21 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=dev" "-Dspring-boot.run.argument
 ```
 
 The API is available at `http://localhost:8080`.
+
+## Observability
+
+The development environment includes Actuator and Micrometer metrics,
+Prometheus storage, and a provisioned Grafana dashboard.
+
+```powershell
+docker compose up -d
+mvn spring-boot:run
+```
+
+Open Prometheus at <http://localhost:9090> and Grafana at
+<http://localhost:3000>. The local Grafana credentials are `admin` / `admin`.
+See [docs/observability.md](docs/observability.md) for the architecture,
+metrics, PromQL queries, exercises, verification steps, and troubleshooting.
 
 ## Debugging with the dev profile
 
